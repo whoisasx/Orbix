@@ -7,9 +7,20 @@ import { motion } from "motion/react";
 import { HiSparkles } from "react-icons/hi2";
 import { RiSecurePaymentLine } from "react-icons/ri";
 import { MdOutlineSpeed } from "react-icons/md";
+import { showToast } from "../utils/toast";
 
 export default function Home() {
 	const navigate = useNavigate();
+
+	const handleWalletNavigation = () => {
+		showToast.info("Launching HD Wallet... 🚀");
+		navigate("/wallets");
+	};
+
+	const handleDappsNavigation = () => {
+		showToast.info("Launching dApp Explorer... 🔍");
+		navigate("/dapps");
+	};
 
 	const containerVariants = {
 		hidden: { opacity: 0 },
@@ -125,7 +136,7 @@ export default function Home() {
 							className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
 						>
 							<motion.button
-								onClick={() => navigate("/wallets")}
+								onClick={handleWalletNavigation}
 								whileHover={{ scale: 1.02 }}
 								whileTap={{ scale: 0.98 }}
 								className="group relative w-full sm:w-auto px-8 py-4 bg-black dark:bg-white text-white dark:text-black font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden"
@@ -138,7 +149,7 @@ export default function Home() {
 							</motion.button>
 
 							<motion.button
-								onClick={() => navigate("/dapps")}
+								onClick={handleDappsNavigation}
 								whileHover={{ scale: 1.02 }}
 								whileTap={{ scale: 0.98 }}
 								className="group w-full sm:w-auto px-8 py-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-semibold rounded-2xl border border-gray-200 dark:border-slate-700 hover:border-red-200 dark:hover:border-red-800 shadow-sm hover:shadow-md transition-all duration-300"

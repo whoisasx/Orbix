@@ -33,7 +33,7 @@ export const Footer = () => {
 						</span>
 						<div className="flex items-center gap-3">
 							<motion.a
-								href="#"
+								href="https://github.com/whoisasx/Orbix"
 								whileHover={{ scale: 1.1, y: -2 }}
 								whileTap={{ scale: 0.9 }}
 								className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-200"
@@ -42,7 +42,7 @@ export const Footer = () => {
 								<RiGithubLine className="w-4 h-4" />
 							</motion.a>
 							<motion.a
-								href="#"
+								href="https://x.com/whoisasx"
 								whileHover={{ scale: 1.1, y: -2 }}
 								whileTap={{ scale: 0.9 }}
 								className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-200"
@@ -51,7 +51,7 @@ export const Footer = () => {
 								<RiTwitterXLine className="w-4 h-4" />
 							</motion.a>
 							<motion.a
-								href="#"
+								href="https://www.linkedin.com/in/adilshaikh4064/"
 								whileHover={{ scale: 1.1, y: -2 }}
 								whileTap={{ scale: 0.9 }}
 								className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-200"

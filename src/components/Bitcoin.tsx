@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { MdAdd, MdDeleteSweep, MdGridView } from "react-icons/md";
-import { SiBitcoin } from "react-icons/si";
+import { FaBitcoin } from "react-icons/fa";
 import { HiOutlineTrash } from "react-icons/hi2";
 import { IoMenu } from "react-icons/io5";
 import { derivePath } from "ed25519-hd-key";
 import { mnemonicToSeedSync } from "bip39";
 import { WalletCard } from "./WalletCard";
 import { motion, AnimatePresence } from "motion/react";
-import toast from "react-hot-toast";
+import { showToast } from "../utils/toast";
 import nacl from "tweetnacl";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import bs58 from "bs58";
@@ -34,7 +35,9 @@ export const Bitcoin = () => {
 		const mnemonic = localStorage.getItem("secrets");
 
 		if (!mnemonic) {
-			toast.error("No seed phrase found. Please create a wallet first.");
+			showToast.error(
+				"No seed phrase found. Please create a wallet first."
+			);
 			return;
 		}
 
@@ -56,9 +59,11 @@ export const Bitcoin = () => {
 			setBitcoins(updated);
 			localStorage.setItem("bitcoins", JSON.stringify(updated));
 
-			toast.success(`Bitcoin wallet ${len + 1} created successfully!`);
+			showToast.success(
+				`Bitcoin wallet ${len + 1} created successfully! ₿`
+			);
 		} catch (error) {
-			toast.error("Failed to create wallet. Please try again.");
+			showToast.error("Failed to create wallet. Please try again.");
 			console.error("Wallet creation error:", error);
 		}
 	};
@@ -67,14 +72,21 @@ export const Bitcoin = () => {
 		const updated = bitcoins.filter((_, idx) => idx !== index);
 		setBitcoins(updated);
 		localStorage.setItem("bitcoins", JSON.stringify(updated));
-		toast.success("Wallet deleted successfully!");
+		showToast.success("Wallet deleted successfully! 🗑️");
 	};
 
 	const handleClearWallets = () => {
 		localStorage.removeItem("bitcoins");
 		setBitcoins([]);
 		setWarning(false);
-		toast.success("All wallets cleared successfully!");
+		showToast.success("All wallets cleared successfully! 🧹");
+
+		const ethereums = localStorage.getItem("ethereums");
+		const solanas = localStorage.getItem("solanas");
+		if (!ethereums && !solanas) {
+			localStorage.removeItem("secrets");
+			window.location.reload();
+		}
 	};
 
 	return (
@@ -88,7 +100,7 @@ export const Bitcoin = () => {
 					className="text-center py-16"
 				>
 					<div className="w-20 h-20 mx-auto bg-linear-to-br from-orange-500 to-yellow-500 rounded-2xl flex items-center justify-center mb-6">
-						<SiBitcoin className="w-10 h-10 text-white" />
+						<FaBitcoin className="w-10 h-10 text-white" />
 					</div>
 					<h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
 						No Bitcoin Wallets Yet
@@ -118,7 +130,7 @@ export const Bitcoin = () => {
 					<div className="flex items-center justify-between mb-8">
 						<div className="flex items-center gap-3">
 							<div className="w-12 h-12 bg-linear-to-br from-orange-500 to-yellow-500 rounded-xl flex items-center justify-center">
-								<SiBitcoin className="w-6 h-6 text-white" />
+								<FaBitcoin className="w-6 h-6 text-white" />
 							</div>
 							<div>
 								<h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -203,66 +215,68 @@ export const Bitcoin = () => {
 			)}
 
 			{/* Delete Confirmation Modal */}
-			<AnimatePresence>
-				{warning && (
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
-						onClick={() => setWarning(false)}
-					>
+			{warning &&
+				createPortal(
+					<AnimatePresence>
 						<motion.div
-							initial={{ opacity: 0, scale: 0.9, y: 20 }}
-							animate={{ opacity: 1, scale: 1, y: 0 }}
-							exit={{ opacity: 0, scale: 0.9, y: 20 }}
-							transition={{ duration: 0.2 }}
-							className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200 dark:border-slate-700"
-							onClick={(e) => e.stopPropagation()}
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+							onClick={() => setWarning(false)}
 						>
-							<div className="flex items-center gap-3 mb-4">
-								<div className="w-12 h-12 bg-red-50 dark:bg-red-950/30 rounded-xl flex items-center justify-center">
-									<MdDeleteSweep className="w-6 h-6 text-red-500" />
+							<motion.div
+								initial={{ opacity: 0, scale: 0.9, y: 20 }}
+								animate={{ opacity: 1, scale: 1, y: 0 }}
+								exit={{ opacity: 0, scale: 0.9, y: 20 }}
+								transition={{ duration: 0.2 }}
+								className="bg-white dark:bg-slate-800 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-gray-200 dark:border-slate-700 max-h-[90vh] overflow-y-auto"
+								onClick={(e) => e.stopPropagation()}
+							>
+								<div className="flex items-center gap-3 mb-4">
+									<div className="w-12 h-12 bg-red-50 dark:bg-red-950/30 rounded-xl flex items-center justify-center">
+										<MdDeleteSweep className="w-6 h-6 text-red-500" />
+									</div>
+									<div>
+										<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+											Clear All Wallets
+										</h3>
+										<p className="text-sm text-gray-600 dark:text-gray-400">
+											This action cannot be undone
+										</p>
+									</div>
 								</div>
-								<div>
-									<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-										Clear All Wallets
-									</h3>
-									<p className="text-sm text-gray-600 dark:text-gray-400">
-										This action cannot be undone
-									</p>
+
+								<p className="text-gray-700 dark:text-gray-300 mb-6">
+									Are you sure you want to delete all{" "}
+									{bitcoins.length} Bitcoin wallets? Make sure
+									you have backed up your private keys before
+									proceeding.
+								</p>
+
+								<div className="flex items-center gap-3">
+									<motion.button
+										onClick={() => setWarning(false)}
+										whileHover={{ scale: 1.02 }}
+										whileTap={{ scale: 0.98 }}
+										className="flex-1 px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all duration-200"
+									>
+										Cancel
+									</motion.button>
+									<motion.button
+										onClick={handleClearWallets}
+										whileHover={{ scale: 1.02 }}
+										whileTap={{ scale: 0.98 }}
+										className="flex-1 px-4 py-3 bg-red-500 text-white font-medium rounded-xl hover:bg-red-600 transition-all duration-200 shadow-lg hover:shadow-xl"
+									>
+										Delete All
+									</motion.button>
 								</div>
-							</div>
-
-							<p className="text-gray-700 dark:text-gray-300 mb-6">
-								Are you sure you want to delete all{" "}
-								{bitcoins.length} Bitcoin wallets? Make sure you
-								have backed up your private keys before
-								proceeding.
-							</p>
-
-							<div className="flex items-center gap-3">
-								<motion.button
-									onClick={() => setWarning(false)}
-									whileHover={{ scale: 1.02 }}
-									whileTap={{ scale: 0.98 }}
-									className="flex-1 px-4 py-3 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-all duration-200"
-								>
-									Cancel
-								</motion.button>
-								<motion.button
-									onClick={handleClearWallets}
-									whileHover={{ scale: 1.02 }}
-									whileTap={{ scale: 0.98 }}
-									className="flex-1 px-4 py-3 bg-red-500 text-white font-medium rounded-xl hover:bg-red-600 transition-all duration-200 shadow-lg hover:shadow-xl"
-								>
-									Delete All
-								</motion.button>
-							</div>
+							</motion.div>
 						</motion.div>
-					</motion.div>
+					</AnimatePresence>,
+					document.body
 				)}
-			</AnimatePresence>
 		</section>
 	);
 };

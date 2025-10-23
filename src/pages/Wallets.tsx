@@ -8,12 +8,12 @@ import { Solana } from "../components/Solana";
 import { Ethereum } from "../components/Ethereum";
 import { Bitcoin } from "../components/Bitcoin";
 import { generateMnemonic, validateMnemonic, mnemonicToSeedSync } from "bip39";
-import toast, { Toaster } from "react-hot-toast";
 import { MdContentCopy, MdSecurity, MdImportExport } from "react-icons/md";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
 import { HiSparkles, HiEye, HiEyeSlash } from "react-icons/hi2";
 import { motion, AnimatePresence } from "motion/react";
 import bs58 from "bs58";
+import { showToast } from "../utils/toast";
 
 export default function Wallets() {
 	const [secrets, setSecrets] = useState<string[]>([]);
@@ -54,14 +54,7 @@ export default function Wallets() {
 		if (inputData.length > 0) {
 			let tempSecret = inputData.trim().toLowerCase();
 			if (!validateMnemonic(tempSecret)) {
-				toast.error("Invalid mnemonic phrase", {
-					position: "bottom-right",
-					style: {
-						background: "#fee2e2",
-						color: "#dc2626",
-						border: "1px solid #fca5a5",
-					},
-				});
+				showToast.error("Invalid mnemonic phrase");
 				setInputData("");
 				return;
 			}
@@ -74,26 +67,12 @@ export default function Wallets() {
 		const seed = mnemonicToSeedSync(secret);
 		setSeed(bs58.encode(seed));
 
-		toast.success("Wallet connected successfully!", {
-			position: "bottom-right",
-			style: {
-				background: "#dcfce7",
-				color: "#16a34a",
-				border: "1px solid #86efac",
-			},
-		});
+		showToast.success("Wallet connected successfully! 🎉");
 	};
 
 	const copyToClipboard = (text: string, label: string) => {
 		navigator.clipboard.writeText(text);
-		toast.success(`${label} copied to clipboard!`, {
-			position: "bottom-right",
-			style: {
-				background: "#eff6ff",
-				color: "#2563eb",
-				border: "1px solid #93c5fd",
-			},
-		});
+		showToast.success(`${label} copied to clipboard! 📋`);
 	};
 
 	const walletTypes = [
@@ -119,7 +98,6 @@ export default function Wallets() {
 
 	return (
 		<section className="min-h-screen bg-linear-to-br from-white via-slate-50 to-gray-100 dark:from-black dark:via-slate-900 dark:to-slate-800 font-vendsans">
-			<Toaster />
 			<Navbar />
 
 			<main className="relative">
