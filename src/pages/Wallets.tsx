@@ -11,6 +11,7 @@ import { generateMnemonic, validateMnemonic, mnemonicToSeedSync } from "bip39";
 import toast, { Toaster } from "react-hot-toast";
 import { MdContentCopy } from "react-icons/md";
 import { IoIosArrowDown, IoIosArrowUp } from "react-icons/io";
+import bs58 from "bs58";
 
 export default function Wallets() {
 	const [secrets, setSecrets] = useState<string[]>([]);
@@ -33,10 +34,11 @@ export default function Wallets() {
 
 		setSecrets(localSecrets);
 		const seed = mnemonicToSeedSync(secretString);
-		setSeed(Buffer.from(seed).toString("base64"));
+		setSeed(bs58.encode(seed));
 	}, []);
 
 	useEffect(() => {
+		if (localStorage.getItem("secrets")) return;
 		const mnemonic = generateMnemonic();
 		const secrets = mnemonic.split(" ");
 		setFirstMnemonic(mnemonic);
@@ -61,7 +63,7 @@ export default function Wallets() {
 		setSecrets(secret.split(" "));
 
 		const seed = mnemonicToSeedSync(secret);
-		setSeed(Buffer.from(seed).toString("base64"));
+		setSeed(bs58.encode(seed));
 	};
 
 	const [clicked, setClicked] = useState(false);

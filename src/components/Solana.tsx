@@ -6,6 +6,7 @@ import { mnemonicToSeedSync } from "bip39";
 import nacl from "tweetnacl";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import bs58 from "bs58";
+import { WalletCard } from "./WalletCard";
 
 export interface Solana {
 	publickey: string;
@@ -26,11 +27,13 @@ export const Solana = () => {
 
 	const handleAddWallet = () => {
 		const len = solanas.length;
-		const path = `m/44'/501'/${len}/0`;
+		const path = `m/44'/501'/${len}'/0'`;
 		const mnemonic = localStorage.getItem("secrets");
+
 		const seed = mnemonicToSeedSync(mnemonic!);
 		const derivedSeed = derivePath(path, seed.toString("hex")).key;
 		const secret = nacl.sign.keyPair.fromSeed(derivedSeed).secretKey;
+
 		const kp = Keypair.fromSecretKey(secret);
 		const publicKey = new PublicKey(kp.publicKey).toBase58();
 		const privateKey = bs58.encode(kp.secretKey);
@@ -43,13 +46,20 @@ export const Solana = () => {
 		console.log(newEntry);
 		setSolanas(updated);
 		localStorage.setItem("solanas", JSON.stringify(updated));
+		console.log(solanas);
+	};
+
+	const handleClearWallets = () => {
+		localStorage.removeItem("solanas");
+		setSolanas([]);
+		setWarning(false);
 	};
 
 	return (
-		<section>
+		<section className="relative">
 			{solanas.length === 0 ? (
 				<div>
-					<button>create wallet</button>
+					<button onClick={handleAddWallet}>create wallet</button>
 				</div>
 			) : (
 				<div>
@@ -65,14 +75,30 @@ export const Solana = () => {
 									add wallet
 								</button>
 								<button onClick={() => setWarning(true)}>
-									clear wallet
+									clear wallets
 								</button>
 							</div>
 							<div>
 								{solanas.map((solana, idx) => (
-									<div key={idx}></div>
+									<div key={idx}>
+										<WalletCard wallet={solana} idx={idx} />
+									</div>
 								))}
 							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{warning && (
+				<div className="absolut inset-0 z-50">
+					<div>
+						<p>it will delete all the wallets</p>
+						<div>
+							<button onClick={() => setWarning(false)}>
+								cancel
+							</button>
+							<button onClick={handleClearWallets}>delete</button>
 						</div>
 					</div>
 				</div>
