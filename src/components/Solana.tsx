@@ -43,10 +43,9 @@ export const Solana = () => {
 			privatekey: privateKey,
 		};
 		const updated = [...solanas, newEntry];
-		console.log(newEntry);
+
 		setSolanas(updated);
 		localStorage.setItem("solanas", JSON.stringify(updated));
-		console.log(solanas);
 	};
 
 	const handleClearWallets = () => {

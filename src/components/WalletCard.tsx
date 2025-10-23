@@ -2,12 +2,14 @@ import { MdContentCopy, MdDeleteOutline } from "react-icons/md";
 import type { Solana } from "./Solana";
 import { useState } from "react";
 import { IoMdEye, IoMdEyeOff } from "react-icons/io";
+import type { Ethereum } from "./Ethereum";
+import type { Bitcoin } from "./Bitcoin";
 
 export const WalletCard = ({
 	wallet,
 	idx,
 }: {
-	wallet: Solana;
+	wallet: Solana | Ethereum | Bitcoin;
 	idx: number;
 }) => {
 	const [watching, setWatching] = useState(false);
