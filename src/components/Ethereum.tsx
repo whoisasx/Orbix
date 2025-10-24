@@ -4,14 +4,11 @@ import { MdAdd, MdDeleteSweep, MdGridView } from "react-icons/md";
 import { FaEthereum } from "react-icons/fa";
 import { HiOutlineTrash } from "react-icons/hi2";
 import { IoMenu } from "react-icons/io5";
-import { derivePath } from "ed25519-hd-key";
 import { mnemonicToSeedSync } from "bip39";
 import { WalletCard } from "./WalletCard";
 import { motion, AnimatePresence } from "motion/react";
 import { showToast } from "../utils/toast";
-import nacl from "tweetnacl";
-import { Keypair, PublicKey } from "@solana/web3.js";
-import bs58 from "bs58";
+import { Wallet, HDNodeWallet } from "ethers";
 
 export interface Ethereum {
 	publickey: string;
@@ -43,16 +40,14 @@ export const Ethereum = () => {
 
 		try {
 			const seed = mnemonicToSeedSync(mnemonic);
-			const derivedSeed = derivePath(path, seed.toString("hex")).key;
-			const secret = nacl.sign.keyPair.fromSeed(derivedSeed).secretKey;
-
-			const kp = Keypair.fromSecretKey(secret);
-			const publicKey = new PublicKey(kp.publicKey).toBase58();
-			const privateKey = bs58.encode(kp.secretKey);
+			const hdNode = HDNodeWallet.fromSeed(seed);
+			const child = hdNode.derivePath(path);
+			const privateKey = child.privateKey;
+			const wallet = new Wallet(privateKey);
 
 			const newEntry: Ethereum = {
-				publickey: publicKey,
-				privatekey: privateKey,
+				publickey: wallet.address,
+				privatekey: wallet.privateKey,
 			};
 			const updated = [...ethereums, newEntry];
 

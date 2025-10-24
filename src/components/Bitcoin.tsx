@@ -4,14 +4,13 @@ import { MdAdd, MdDeleteSweep, MdGridView } from "react-icons/md";
 import { FaBitcoin } from "react-icons/fa";
 import { HiOutlineTrash } from "react-icons/hi2";
 import { IoMenu } from "react-icons/io5";
-import { derivePath } from "ed25519-hd-key";
 import { mnemonicToSeedSync } from "bip39";
 import { WalletCard } from "./WalletCard";
 import { motion, AnimatePresence } from "motion/react";
 import { showToast } from "../utils/toast";
-import nacl from "tweetnacl";
-import { Keypair, PublicKey } from "@solana/web3.js";
-import bs58 from "bs58";
+import * as bip32 from "bip32";
+import * as bitcoin from "bitcoinjs-lib";
+import * as ecc from "tiny-secp256k1";
 
 export interface Bitcoin {
 	publickey: string;
@@ -30,6 +29,7 @@ export const Bitcoin = () => {
 	}, []);
 
 	const handleAddWallet = () => {
+		const BIP32 = bip32.BIP32Factory(ecc);
 		const len = bitcoins.length;
 		const path = `m/44'/0'/${len}'/0'`;
 		const mnemonic = localStorage.getItem("secrets");
@@ -43,16 +43,13 @@ export const Bitcoin = () => {
 
 		try {
 			const seed = mnemonicToSeedSync(mnemonic);
-			const derivedSeed = derivePath(path, seed.toString("hex")).key;
-			const secret = nacl.sign.keyPair.fromSeed(derivedSeed).secretKey;
-
-			const kp = Keypair.fromSecretKey(secret);
-			const publicKey = new PublicKey(kp.publicKey).toBase58();
-			const privateKey = bs58.encode(kp.secretKey);
+			const network = bitcoin.networks.bitcoin;
+			const root = BIP32.fromSeed(seed, network);
+			const child = root.derivePath(path);
 
 			const newEntry: Bitcoin = {
-				publickey: publicKey,
-				privatekey: privateKey,
+				publickey: Buffer.from(child.publicKey).toString("base64"),
+				privatekey: child.toWIF(),
 			};
 			const updated = [...bitcoins, newEntry];
 
