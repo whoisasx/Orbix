@@ -5,12 +5,20 @@ import { NodeGlobalsPolyfillPlugin } from "@esbuild-plugins/node-globals-polyfil
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
 // https://vite.dev/config/
-// export default defineConfig({
-// 	plugins: [react(), tailwindcss()],
-// });
-
 export default defineConfig({
 	plugins: [react(), tailwindcss()],
+	resolve: {
+		alias: {
+			process: "process/browser",
+			buffer: "buffer",
+			stream: "stream-browserify",
+			crypto: "crypto-browserify",
+		},
+	},
+	define: {
+		"process.env": {},
+		global: "globalThis",
+	},
 	optimizeDeps: {
 		esbuildOptions: {
 			define: {
