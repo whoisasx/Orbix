@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { NodeGlobalsPolyfillPlugin } from "@esbuild-plugins/node-globals-polyfill";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
+import rollupNodePolyFill from "rollup-plugin-polyfill-node";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -16,8 +17,12 @@ export default defineConfig({
 		},
 	},
 	define: {
-		"process.env": {},
 		global: "globalThis",
+	},
+	build: {
+		rollupOptions: {
+			plugins: [rollupNodePolyFill()],
+		},
 	},
 	optimizeDeps: {
 		esbuildOptions: {
