@@ -121,8 +121,9 @@ export const Solana = () => {
 					transition={{ duration: 0.5 }}
 				>
 					{/* Header */}
-					<div className="flex items-center justify-between mb-8">
-						<div className="flex items-center gap-3">
+					<div className="mb-8">
+						{/* Title Section */}
+						<div className="flex items-center gap-3 mb-4">
 							<div className="w-12 h-12 bg-linear-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
 								<SiSolana className="w-6 h-6 text-white" />
 							</div>
@@ -137,9 +138,10 @@ export const Solana = () => {
 							</div>
 						</div>
 
-						{/* View Toggle */}
-						<div className="flex items-center gap-3">
-							<div className="hidden md:flex items-center gap-2 p-1 bg-gray-100 dark:bg-slate-800 rounded-lg">
+						{/* Controls Section */}
+						<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+							{/* View Toggle */}
+							<div className="flex items-center gap-2 p-1 bg-gray-100 dark:bg-slate-800 rounded-lg">
 								<button
 									onClick={() => setViewMode("grid")}
 									className={`p-2 rounded-md transition-all duration-200 ${
@@ -162,35 +164,44 @@ export const Solana = () => {
 								</button>
 							</div>
 
-							<motion.button
-								onClick={handleAddWallet}
-								whileHover={{ scale: 1.02 }}
-								whileTap={{ scale: 0.98 }}
-								className="inline-flex items-center gap-2 px-4 py-2 bg-linear-to-r from-purple-500 to-pink-500 text-white font-medium rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-md hover:shadow-lg"
-							>
-								<MdAdd className="w-4 h-4" />
-								Add Wallet
-							</motion.button>
-
-							{solanas.length > 0 && (
+							{/* Action Buttons */}
+							<div className="flex items-center gap-3 w-full sm:w-auto">
 								<motion.button
-									onClick={() => setWarning(true)}
+									onClick={handleAddWallet}
 									whileHover={{ scale: 1.02 }}
 									whileTap={{ scale: 0.98 }}
-									className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-medium rounded-xl hover:bg-red-100 dark:hover:bg-red-950/50 transition-all duration-200 border border-red-200 dark:border-red-800"
+									className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-linear-to-r from-purple-500 to-pink-500 text-white font-medium rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-md hover:shadow-lg"
 								>
-									<HiOutlineTrash className="w-4 h-4" />
-									Clear All
+									<MdAdd className="w-4 h-4" />
+									<span className="hidden xs:inline">
+										Add Wallet
+									</span>
+									<span className="xs:hidden">Add</span>
 								</motion.button>
-							)}
+
+								{solanas.length > 0 && (
+									<motion.button
+										onClick={() => setWarning(true)}
+										whileHover={{ scale: 1.02 }}
+										whileTap={{ scale: 0.98 }}
+										className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-medium rounded-xl hover:bg-red-100 dark:hover:bg-red-950/50 transition-all duration-200 border border-red-200 dark:border-red-800"
+									>
+										<HiOutlineTrash className="w-4 h-4" />
+										<span className="hidden xs:inline">
+											Clear All
+										</span>
+										<span className="xs:hidden">Clear</span>
+									</motion.button>
+								)}
+							</div>
 						</div>
 					</div>
 
 					{/* Wallets Grid/List */}
 					<div
-						className={`grid gap-6 ${
+						className={`grid gap-4 sm:gap-6 ${
 							viewMode === "grid"
-								? "grid-cols-1 lg:grid-cols-2"
+								? "grid-cols-1 xl:grid-cols-2"
 								: "grid-cols-1"
 						}`}
 					>
