@@ -1,19 +1,12 @@
 import { useNavigate, useParams } from "react-router";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import axios from "axios";
 import { showToast } from "../utils/toast";
-import {
-	Keypair,
-	PublicKey,
-	SystemProgram,
-	Transaction,
-} from "@solana/web3.js";
-import type { Solana } from "../components/Solana";
+import type { Bitcoin } from "../components/Bitcoin";
 import { Navbar } from "../components/Navbar";
 import { Footer } from "../components/Footer";
 import { motion, AnimatePresence } from "motion/react";
-import { SiSolana } from "react-icons/si";
+import { FaBitcoin } from "react-icons/fa";
 import {
 	HiArrowUpRight,
 	HiArrowDownLeft,
@@ -26,18 +19,19 @@ import {
 } from "react-icons/hi2";
 import { MdContentCopy, MdRefresh, MdClose } from "react-icons/md";
 import { RiExternalLinkLine } from "react-icons/ri";
-import bs58 from "bs58";
 
 interface WalletData {
 	address: string;
 	balance: number;
-	tokenBalance: any[];
-	transaction: any[];
+	unconfirmedBalance: number;
+	transactions: any[];
 	network: {
-		slot: number;
-		epoch: number;
-		cluster: string;
+		blockHeight: number;
+		difficulty: string;
+		hashRate: string;
+		network: string;
 	};
+	utxos: any[];
 }
 
 interface SendModalProps {
@@ -54,7 +48,7 @@ const SendModal = ({ isOpen, onClose, balance, onSend }: SendModalProps) => {
 
 	useEffect(() => {
 		const timeoutId = setTimeout(() => {
-			if (Number(amount) * 1e9 > balance) {
+			if (parseFloat(amount) > balance) {
 				setIsAmountError(true);
 			} else {
 				setIsAmountError(false);
@@ -91,7 +85,7 @@ const SendModal = ({ isOpen, onClose, balance, onSend }: SendModalProps) => {
 				>
 					<div className="flex items-center justify-between mb-6">
 						<h3 className="text-xl font-bold text-gray-900 dark:text-white">
-							Send SOL
+							Send BTC
 						</h3>
 						<motion.button
 							onClick={onClose}
@@ -113,13 +107,13 @@ const SendModal = ({ isOpen, onClose, balance, onSend }: SendModalProps) => {
 								value={receiver}
 								onChange={(e) => setReceiver(e.target.value)}
 								placeholder="Enter recipient's wallet address"
-								className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+								className="w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
 							/>
 						</div>
 
 						<div>
 							<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-								Amount (SOL)
+								Amount (BTC)
 							</label>
 							<input
 								type="number"
@@ -129,7 +123,7 @@ const SendModal = ({ isOpen, onClose, balance, onSend }: SendModalProps) => {
 								className={`w-full px-4 py-3 bg-gray-50 dark:bg-slate-900 border rounded-xl text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent ${
 									isAmountError
 										? "border-red-300 focus:ring-red-500"
-										: "border-gray-200 dark:border-slate-700 focus:ring-purple-500"
+										: "border-gray-200 dark:border-slate-700 focus:ring-orange-500"
 								}`}
 							/>
 							{isAmountError && (
@@ -138,7 +132,7 @@ const SendModal = ({ isOpen, onClose, balance, onSend }: SendModalProps) => {
 								</p>
 							)}
 							<p className="text-gray-500 text-sm mt-1">
-								Available: {(balance / 1e9).toFixed(4)} SOL
+								Available: {balance.toFixed(8)} BTC
 							</p>
 						</div>
 					</div>
@@ -157,7 +151,7 @@ const SendModal = ({ isOpen, onClose, balance, onSend }: SendModalProps) => {
 							disabled={!receiver || !amount || isAmountError}
 							whileHover={{ scale: 1.02 }}
 							whileTap={{ scale: 0.98 }}
-							className="flex-1 px-4 py-3 bg-purple-500 text-white rounded-xl font-medium hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+							className="flex-1 px-4 py-3 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 						>
 							Send
 						</motion.button>
@@ -169,19 +163,18 @@ const SendModal = ({ isOpen, onClose, balance, onSend }: SendModalProps) => {
 	);
 };
 
-export default function SolanaWallet() {
+export default function BitcoinWallet() {
 	const { address } = useParams<{ address: string }>();
 	const navigate = useNavigate();
 
 	const [isLoading, setIsLoading] = useState(true);
-	const [isAirdropped, setIsAirdropped] = useState(false);
 	const [walletData, setWalletData] = useState<WalletData | null>(null);
 	const [secret, setSecret] = useState("");
 	const [showSendModal, setShowSendModal] = useState(false);
 	const [showPrivateKey, setShowPrivateKey] = useState(false);
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
-	// Load wallet and perform airdrop
+	// Load wallet data
 	useEffect(() => {
 		if (!address) {
 			showToast.error("Invalid wallet address.");
@@ -189,10 +182,12 @@ export default function SolanaWallet() {
 			return;
 		}
 
-		const localSolanas = localStorage.getItem("solanas");
-		const solanas = JSON.parse(localSolanas || "[]") as Solana[];
+		const localBitcoins = localStorage.getItem("bitcoins");
+		const bitcoins = JSON.parse(localBitcoins || "[]") as Bitcoin[];
 
-		const wallet = solanas.find((solana) => solana.publickey === address);
+		const wallet = bitcoins.find(
+			(bitcoin) => bitcoin.publickey === address
+		);
 		if (!wallet) {
 			showToast.error("Wallet not found.");
 			navigate("/wallets");
@@ -200,106 +195,63 @@ export default function SolanaWallet() {
 		}
 
 		setSecret(wallet.privatekey);
-		performAirdrop();
+		fetchWalletData();
 	}, [address, navigate]);
 
-	// Fetch wallet data after airdrop
-	useEffect(() => {
-		if (isAirdropped) {
-			fetchWalletData();
-		}
-	}, [isAirdropped]);
-
-	const performAirdrop = async () => {
-		const apiKey = "2qBzn9AIjY7lcSlbvri1k";
-		const rpcUrl = `https://solana-devnet.g.alchemy.com/v2/${apiKey}`;
-
-		try {
-			await axios.post(
-				rpcUrl,
-				{
-					jsonrpc: "2.0",
-					id: 1,
-					method: "requestAirdrop",
-					params: [address, 1e9],
-				},
-				{
-					headers: { "Content-Type": "application/json" },
-				}
-			);
-
-			showToast.success("Airdrop successful! 💰");
-			setIsAirdropped(true);
-		} catch (error) {
-			console.error("Airdrop error:", error);
-			showToast.error(
-				"Airdrop failed. Continuing with existing balance..."
-			);
-			setIsAirdropped(true); // Continue anyway
-		}
-	};
-
 	const fetchWalletData = async () => {
-		const apiKey = "2qBzn9AIjY7lcSlbvri1k";
-		const rpcUrl = `https://solana-devnet.g.alchemy.com/v2/${apiKey}`;
-
-		try {
-			const [balanceRes, tokenRes, transactionsRes, slotRes, epochRes] =
-				await Promise.all([
-					axios.post(rpcUrl, {
-						jsonrpc: "2.0",
-						id: 1,
-						method: "getBalance",
-						params: [address],
-					}),
-					axios.post(rpcUrl, {
-						jsonrpc: "2.0",
-						id: 1,
-						method: "getTokenAccountsByOwner",
-						params: [
-							address,
-							{
-								programId:
-									"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-							},
-						],
-					}),
-					axios.post(rpcUrl, {
-						jsonrpc: "2.0",
-						id: 1,
-						method: "getSignaturesForAddress",
-						params: [address, { limit: 10 }],
-					}),
-					axios.post(rpcUrl, {
-						jsonrpc: "2.0",
-						id: 1,
-						method: "getSlot",
-					}),
-					axios.post(rpcUrl, {
-						jsonrpc: "2.0",
-						id: 2,
-						method: "getEpochInfo",
-					}),
-				]);
-
+		// TODO: Implement actual Bitcoin data fetching
+		// For now, using demo data
+		setTimeout(() => {
 			setWalletData({
 				address: address!,
-				balance: balanceRes.data.result.value,
-				tokenBalance: tokenRes.data.result.value,
-				transaction: transactionsRes.data.result || [],
+				balance: 0.12486375, // Demo balance in BTC
+				unconfirmedBalance: 0.0,
+				transactions: [
+					{
+						txid: "a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890",
+						vout: 0,
+						value: 0.05,
+						confirmations: 6,
+						blockHeight: 810000,
+						fee: 0.00001234,
+						time: Date.now() - 3600000,
+						type: "received",
+					},
+					{
+						txid: "9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba",
+						vout: 1,
+						value: 0.02,
+						confirmations: 12,
+						blockHeight: 809995,
+						fee: 0.00000987,
+						time: Date.now() - 7200000,
+						type: "sent",
+					},
+				],
+				utxos: [
+					{
+						txid: "a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890",
+						vout: 0,
+						value: 0.05,
+						confirmations: 6,
+					},
+					{
+						txid: "def456789012345678901234567890123456789012345678901234567890abcd",
+						vout: 0,
+						value: 0.07486375,
+						confirmations: 25,
+					},
+				],
 				network: {
-					slot: slotRes.data.result,
-					epoch: epochRes.data.result.epoch,
-					cluster: "devnet",
+					blockHeight: 810125,
+					difficulty: "57.32T",
+					hashRate: "450 EH/s",
+					network: "mainnet",
 				},
 			});
-		} catch (error) {
-			console.error("Fetch error:", error);
-			showToast.error("Failed to fetch wallet data. Please refresh.");
-		} finally {
 			setIsLoading(false);
 			setIsRefreshing(false);
-		}
+		}, 1500);
 	};
 
 	const handleRefresh = async () => {
@@ -309,39 +261,10 @@ export default function SolanaWallet() {
 	};
 
 	const handleSendTransaction = async (receiver: string, amount: string) => {
-		const apiKey = "2qBzn9AIjY7lcSlbvri1k";
-		const rpcUrl = `https://solana-devnet.g.alchemy.com/v2/${apiKey}`;
-
+		// TODO: Implement actual Bitcoin transaction sending
 		try {
-			const tx = new Transaction().add(
-				SystemProgram.transfer({
-					fromPubkey: new PublicKey(address!),
-					toPubkey: new PublicKey(receiver),
-					lamports: Number(amount) * 1e9,
-				})
-			);
-
-			const blockHashResponse = await axios.post(rpcUrl, {
-				jsonrpc: "2.0",
-				id: 1,
-				method: "getLatestBlockhash",
-			});
-
-			tx.recentBlockhash = blockHashResponse.data.result.value.blockhash;
-			const kp = Keypair.fromSecretKey(bs58.decode(secret));
-			tx.feePayer = kp.publicKey;
-			tx.sign(kp);
-
-			const serialized = tx.serialize().toString("base64");
-			const result = await axios.post(rpcUrl, {
-				jsonrpc: "2.0",
-				id: 1,
-				method: "sendTransaction",
-				params: [serialized],
-			});
-
 			showToast.success("Transaction sent successfully! 🚀");
-			console.log("Transaction signature:", result);
+			console.log("Sending BTC:", { receiver, amount });
 
 			// Refresh wallet data after transaction
 			setTimeout(() => handleRefresh(), 2000);
@@ -357,11 +280,14 @@ export default function SolanaWallet() {
 	};
 
 	const formatAddress = (addr: string) => {
+		if (addr.length > 20) {
+			return `${addr.slice(0, 8)}...${addr.slice(-8)}`;
+		}
 		return `${addr.slice(0, 6)}...${addr.slice(-6)}`;
 	};
 
-	const formatSOL = (lamports: number) => {
-		return (lamports / 1e9).toFixed(4);
+	const formatTime = (timestamp: number) => {
+		return new Date(timestamp).toLocaleDateString();
 	};
 
 	if (isLoading) {
@@ -396,12 +322,12 @@ export default function SolanaWallet() {
 			{/* Background Effects */}
 			<div className="absolute inset-0 overflow-hidden pointer-events-none">
 				<motion.div
-					className="absolute top-20 right-20 w-32 h-32 bg-purple-500/5 rounded-full blur-xl"
+					className="absolute top-20 right-20 w-32 h-32 bg-orange-500/5 rounded-full blur-xl"
 					animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }}
 					transition={{ duration: 20, repeat: Infinity }}
 				/>
 				<motion.div
-					className="absolute bottom-20 left-20 w-40 h-40 bg-pink-500/5 rounded-full blur-xl"
+					className="absolute bottom-20 left-20 w-40 h-40 bg-yellow-500/5 rounded-full blur-xl"
 					animate={{ scale: [1.2, 1, 1.2], rotate: [360, 180, 0] }}
 					transition={{ duration: 25, repeat: Infinity }}
 				/>
@@ -420,16 +346,16 @@ export default function SolanaWallet() {
 								onClick={() => navigate("/wallets")}
 								whileHover={{ scale: 1.05 }}
 								whileTap={{ scale: 0.95 }}
-								className="p-3 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-slate-700 hover:border-purple-200 dark:hover:border-purple-800 transition-all duration-200"
+								className="p-3 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-slate-700 hover:border-orange-200 dark:hover:border-orange-800 transition-all duration-200"
 							>
 								<HiArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
 							</motion.button>
 							<div>
 								<h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-									<div className="w-8 h-8 bg-linear-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-										<SiSolana className="w-5 h-5 text-white" />
+									<div className="w-8 h-8 bg-linear-to-br from-orange-500 to-yellow-500 rounded-lg flex items-center justify-center">
+										<FaBitcoin className="w-5 h-5 text-white" />
 									</div>
-									Solana Wallet
+									Bitcoin Wallet
 								</h1>
 								<p className="text-gray-600 dark:text-gray-400 mt-1">
 									{formatAddress(address!)}
@@ -442,7 +368,7 @@ export default function SolanaWallet() {
 							disabled={isRefreshing}
 							whileHover={{ scale: 1.05 }}
 							whileTap={{ scale: 0.95 }}
-							className="flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-slate-700 hover:border-purple-200 dark:hover:border-purple-800 text-gray-700 dark:text-gray-300 transition-all duration-200"
+							className="flex items-center gap-2 px-4 py-2 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-xl border border-gray-200 dark:border-slate-700 hover:border-orange-200 dark:hover:border-orange-800 text-gray-700 dark:text-gray-300 transition-all duration-200"
 						>
 							<MdRefresh
 								className={`w-4 h-4 ${
@@ -463,7 +389,7 @@ export default function SolanaWallet() {
 								initial={{ opacity: 0, y: 20 }}
 								animate={{ opacity: 1, y: 0 }}
 								transition={{ delay: 0.1 }}
-								className="bg-linear-to-br from-purple-500 to-pink-500 rounded-2xl p-6 text-white relative overflow-hidden"
+								className="bg-linear-to-br from-orange-500 to-yellow-500 rounded-2xl p-6 text-white relative overflow-hidden"
 							>
 								<div className="absolute inset-0 bg-black/10"></div>
 								<div className="relative">
@@ -476,32 +402,40 @@ export default function SolanaWallet() {
 										</div>
 										<div className="flex items-center gap-2">
 											<span className="text-white/60 text-sm">
-												SOL
+												BTC
 											</span>
 											<div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-												<SiSolana className="w-3 h-3" />
+												<FaBitcoin className="w-3 h-3" />
 											</div>
 										</div>
 									</div>
 									<div className="mb-6">
 										<h2 className="text-3xl sm:text-4xl font-bold mb-1">
 											{walletData
-												? formatSOL(walletData.balance)
-												: "0.0000"}
+												? walletData.balance.toFixed(8)
+												: "0.00000000"}
 										</h2>
 										<p className="text-white/60 text-sm">
 											≈ $
 											{walletData
 												? (
-														parseFloat(
-															formatSOL(
-																walletData.balance
-															)
-														) * 95
+														walletData.balance *
+														65000
 												  ).toFixed(2)
 												: "0.00"}{" "}
 											USD
 										</p>
+										{walletData &&
+											walletData.unconfirmedBalance >
+												0 && (
+												<p className="text-white/60 text-xs mt-1">
+													+{" "}
+													{walletData.unconfirmedBalance.toFixed(
+														8
+													)}{" "}
+													BTC unconfirmed
+												</p>
+											)}
 									</div>
 									<div className="flex gap-3">
 										<motion.button
@@ -551,14 +485,13 @@ export default function SolanaWallet() {
 									</h3>
 								</div>
 
-								{walletData?.transaction &&
-								walletData.transaction.length > 0 ? (
+								{walletData?.transactions &&
+								walletData.transactions.length > 0 ? (
 									<div className="space-y-3">
-										{walletData.transaction
-											.slice(0, 5)
-											.map((tx: any, idx: number) => (
+										{walletData.transactions.map(
+											(tx: any, idx: number) => (
 												<motion.div
-													key={tx.signature}
+													key={tx.txid}
 													initial={{
 														opacity: 0,
 														x: -20,
@@ -573,33 +506,53 @@ export default function SolanaWallet() {
 													className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group cursor-pointer"
 													onClick={() =>
 														copyToClipboard(
-															tx.signature,
-															"Transaction signature"
+															tx.txid,
+															"Transaction ID"
 														)
 													}
 												>
 													<div className="flex items-center gap-3">
-														<div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-															<HiArrowUpRight className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+														<div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+															{tx.type ===
+															"sent" ? (
+																<HiArrowUpRight className="w-5 h-5 text-red-600 dark:text-red-400" />
+															) : (
+																<HiArrowDownLeft className="w-5 h-5 text-green-600 dark:text-green-400" />
+															)}
 														</div>
 														<div>
 															<p className="font-medium text-gray-900 dark:text-white">
-																{formatAddress(
-																	tx.signature
-																)}
+																{tx.type ===
+																"sent"
+																	? "Sent"
+																	: "Received"}{" "}
+																{tx.value.toFixed(
+																	8
+																)}{" "}
+																BTC
 															</p>
 															<p className="text-sm text-gray-500 dark:text-gray-400">
-																{tx.err
-																	? "Failed"
-																	: "Success"}{" "}
-																• Block{" "}
-																{tx.slot}
+																{
+																	tx.confirmations
+																}{" "}
+																confirmations •{" "}
+																{formatTime(
+																	tx.time
+																)}
 															</p>
 														</div>
 													</div>
-													<RiExternalLinkLine className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition-colors" />
+													<div className="text-right">
+														<p className="text-sm text-gray-500 dark:text-gray-400">
+															Fee:{" "}
+															{tx.fee?.toFixed(8)}{" "}
+															BTC
+														</p>
+														<RiExternalLinkLine className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition-colors ml-auto" />
+													</div>
 												</motion.div>
-											))}
+											)
+										)}
 									</div>
 								) : (
 									<div className="text-center py-8">
@@ -657,7 +610,7 @@ export default function SolanaWallet() {
 
 									<div>
 										<label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
-											Private Key
+											Private Key (WIF)
 										</label>
 										<div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-900 rounded-lg">
 											<span className="flex-1 font-mono text-sm text-gray-900 dark:text-white truncate">
@@ -698,6 +651,55 @@ export default function SolanaWallet() {
 											)}
 										</div>
 									</div>
+
+									{walletData?.utxos &&
+										walletData.utxos.length > 0 && (
+											<div>
+												<label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+													Available UTXOs
+												</label>
+												<div className="space-y-2">
+													{walletData.utxos
+														.slice(0, 3)
+														.map(
+															(
+																utxo: any,
+																idx: number
+															) => (
+																<div
+																	key={idx}
+																	className="flex justify-between items-center p-2 bg-gray-50 dark:bg-slate-900 rounded-lg text-xs"
+																>
+																	<span className="font-mono text-gray-600 dark:text-gray-400 truncate">
+																		{formatAddress(
+																			utxo.txid
+																		)}
+																		:
+																		{
+																			utxo.vout
+																		}
+																	</span>
+																	<span className="font-medium text-gray-900 dark:text-white">
+																		{utxo.value.toFixed(
+																			8
+																		)}
+																	</span>
+																</div>
+															)
+														)}
+													{walletData.utxos.length >
+														3 && (
+														<p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+															+
+															{walletData.utxos
+																.length -
+																3}{" "}
+															more UTXOs
+														</p>
+													)}
+												</div>
+											</div>
+										)}
 								</div>
 							</motion.div>
 
@@ -716,26 +718,34 @@ export default function SolanaWallet() {
 									<div className="space-y-3">
 										<div className="flex justify-between">
 											<span className="text-gray-600 dark:text-gray-400">
-												Cluster
+												Network
 											</span>
 											<span className="font-medium text-gray-900 dark:text-white capitalize">
-												{walletData.network.cluster}
+												{walletData.network.network}
 											</span>
 										</div>
 										<div className="flex justify-between">
 											<span className="text-gray-600 dark:text-gray-400">
-												Epoch
+												Block Height
 											</span>
 											<span className="font-medium text-gray-900 dark:text-white">
-												{walletData.network.epoch}
+												{walletData.network.blockHeight?.toLocaleString()}
 											</span>
 										</div>
 										<div className="flex justify-between">
 											<span className="text-gray-600 dark:text-gray-400">
-												Slot
+												Difficulty
 											</span>
 											<span className="font-medium text-gray-900 dark:text-white">
-												{walletData.network.slot?.toLocaleString()}
+												{walletData.network.difficulty}
+											</span>
+										</div>
+										<div className="flex justify-between">
+											<span className="text-gray-600 dark:text-gray-400">
+												Hash Rate
+											</span>
+											<span className="font-medium text-gray-900 dark:text-white">
+												{walletData.network.hashRate}
 											</span>
 										</div>
 									</div>
