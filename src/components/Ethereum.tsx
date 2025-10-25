@@ -213,6 +213,7 @@ export const Ethereum = () => {
 									wallet={ethereum}
 									idx={idx}
 									onDelete={() => handleDeleteWallet(idx)}
+									prefixUrl="ethereum"
 								/>
 							))}
 						</AnimatePresence>

@@ -7,17 +7,22 @@ import type { Ethereum } from "./Ethereum";
 import type { Bitcoin } from "./Bitcoin";
 import { motion } from "motion/react";
 import toast from "react-hot-toast";
+import { FaLocationArrow } from "react-icons/fa";
+import { useNavigate } from "react-router";
 
 export const WalletCard = ({
 	wallet,
 	idx,
 	onDelete,
+	prefixUrl,
 }: {
 	wallet: Solana | Ethereum | Bitcoin;
 	idx: number;
 	onDelete?: () => void;
+	prefixUrl?: string;
 }) => {
 	const [watching, setWatching] = useState(false);
+	const navigate = useNavigate();
 
 	const copyToClipboard = (text: string, label: string) => {
 		navigator.clipboard.writeText(text);
@@ -57,6 +62,20 @@ export const WalletCard = ({
 					<h3 className="text-lg font-semibold text-gray-900 dark:text-white">
 						Wallet {idx + 1}
 					</h3>
+					{/* Dashboard Access Button */}
+					{prefixUrl && (
+						<motion.button
+							onClick={() =>
+								navigate(`/${prefixUrl}/${wallet.publickey}`)
+							}
+							whileHover={{ scale: 1.1 }}
+							whileTap={{ scale: 0.9 }}
+							className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-all duration-200"
+							title="Open wallet dashboard"
+						>
+							<FaLocationArrow className="w-4 h-4" />
+						</motion.button>
+					)}
 				</div>
 
 				{onDelete && (

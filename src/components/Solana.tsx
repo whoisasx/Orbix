@@ -212,6 +212,7 @@ export const Solana = () => {
 									wallet={solana}
 									idx={idx}
 									onDelete={() => handleDeleteWallet(idx)}
+									prefixUrl="solana"
 								/>
 							))}
 						</AnimatePresence>

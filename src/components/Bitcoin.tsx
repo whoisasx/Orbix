@@ -215,6 +215,7 @@ export const Bitcoin = () => {
 									wallet={bitcoin}
 									idx={idx}
 									onDelete={() => handleDeleteWallet(idx)}
+									prefixUrl="bitcoin"
 								/>
 							))}
 						</AnimatePresence>
