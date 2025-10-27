@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { MdAdd, MdDeleteSweep, MdGridView } from "react-icons/md";
 import { SiSolana } from "react-icons/si";
-import { HiOutlineTrash } from "react-icons/hi2";
+import { HiOutlineTrash, HiChartBarSquare } from "react-icons/hi2";
 import { IoMenu } from "react-icons/io5";
+import { useNavigate } from "react-router";
 import { derivePath } from "ed25519-hd-key";
 import { mnemonicToSeedSync } from "bip39";
 import nacl from "tweetnacl";
@@ -22,6 +23,7 @@ export const Solana = () => {
 	const [solanas, setSolanas] = useState<Solana[]>([]);
 	const [warning, setWarning] = useState(false);
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+	const navigate = useNavigate();
 
 	useEffect(() => {
 		const localSolanas = localStorage.getItem("solanas");
@@ -166,6 +168,16 @@ export const Solana = () => {
 
 							{/* Action Buttons */}
 							<div className="flex items-center gap-3 w-full sm:w-auto">
+								<motion.button
+									onClick={() => navigate("/solana")}
+									whileHover={{ scale: 1.02 }}
+									whileTap={{ scale: 0.98 }}
+									className="flex-1 sm:flex-none inline-flex items-center justify-center px-3 py-2 bg-linear-to-r from-blue-500 to-cyan-500 text-white font-medium rounded-xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-200 shadow-md hover:shadow-lg"
+									title="Solana Dashboard"
+								>
+									<HiChartBarSquare className="w-6 h-6" />
+								</motion.button>
+
 								<motion.button
 									onClick={handleAddWallet}
 									whileHover={{ scale: 1.02 }}
