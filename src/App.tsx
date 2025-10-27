@@ -7,6 +7,7 @@ import LostPath from "./pages/LostPath";
 import SolanaWallet from "./pages/SolanaWallet";
 import EthereumWallet from "./pages/EthereumWallet";
 import BitcoinWallet from "./pages/BitcoinWallet";
+import SolanaDashboard from "./pages/SolanaDashboard";
 
 function App() {
 	return (
@@ -18,6 +19,7 @@ function App() {
 				<Route path="solana/:address" element={<SolanaWallet />} />
 				<Route path="ethereum/:address" element={<EthereumWallet />} />
 				<Route path="bitcoin/:address" element={<BitcoinWallet />} />
+				<Route path="solana" element={<SolanaDashboard />} />
 				<Route path="*" element={<LostPath />} />
 			</Routes>
 			<Toaster

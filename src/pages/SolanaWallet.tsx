@@ -33,6 +33,7 @@ interface WalletData {
 	balance: number;
 	tokenBalance: any[];
 	transaction: any[];
+	signatures: any[];
 	network: {
 		slot: number;
 		epoch: number;
@@ -244,7 +245,7 @@ export default function SolanaWallet() {
 		const rpcUrl = `https://solana-devnet.g.alchemy.com/v2/${apiKey}`;
 
 		try {
-			const [balanceRes, tokenRes, transactionsRes, slotRes, epochRes] =
+			const [balanceRes, tokenRes, signatureRes, slotRes, epochRes] =
 				await Promise.all([
 					axios.post(rpcUrl, {
 						jsonrpc: "2.0",
@@ -282,11 +283,30 @@ export default function SolanaWallet() {
 					}),
 				]);
 
+			const signatures = signatureRes.data.result.map(
+				(tx: any) => tx.signature
+			);
+			const txDetails = [];
+			for (const sig of signatures) {
+				const txRes = await axios.post(rpcUrl, {
+					jsonrpc: "2.0",
+					id: 1,
+					method: "getTransaction",
+					params: [
+						sig,
+						{ encoding: "json", commitment: "confirmed" },
+					],
+				});
+
+				txDetails.push(txRes.data.result);
+			}
+
 			setWalletData({
 				address: address!,
 				balance: balanceRes.data.result.value,
 				tokenBalance: tokenRes.data.result.value,
-				transaction: transactionsRes.data.result || [],
+				transaction: txDetails || [],
+				signatures: signatureRes.data.result || [],
 				network: {
 					slot: slotRes.data.result,
 					epoch: epochRes.data.result.epoch,
@@ -328,7 +348,18 @@ export default function SolanaWallet() {
 			});
 
 			tx.recentBlockhash = blockHashResponse.data.result.value.blockhash;
-			const kp = Keypair.fromSecretKey(bs58.decode(secret));
+			let kp: Keypair;
+			try {
+				const secretUint8 = bs58.decode(secret.trim());
+				kp = Keypair.fromSecretKey(secretUint8);
+			} catch (err: any) {
+				console.error("Secret key parse/sign error:", err);
+				showToast.error(
+					"Invalid private key format. Cannot sign transaction."
+				);
+				return;
+			}
+
 			tx.feePayer = kp.publicKey;
 			tx.sign(kp);
 
@@ -337,7 +368,7 @@ export default function SolanaWallet() {
 				jsonrpc: "2.0",
 				id: 1,
 				method: "sendTransaction",
-				params: [serialized],
+				params: [serialized, { encoding: "base64" }],
 			});
 
 			showToast.success("Transaction sent successfully! 🚀");
@@ -554,11 +585,10 @@ export default function SolanaWallet() {
 								{walletData?.transaction &&
 								walletData.transaction.length > 0 ? (
 									<div className="space-y-3">
-										{walletData.transaction
-											.slice(0, 5)
-											.map((tx: any, idx: number) => (
+										{walletData.transaction.map(
+											(tx: any, idx: number) => (
 												<motion.div
-													key={tx.signature}
+													key={idx}
 													initial={{
 														opacity: 0,
 														x: -20,
@@ -573,33 +603,47 @@ export default function SolanaWallet() {
 													className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-900 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group cursor-pointer"
 													onClick={() =>
 														copyToClipboard(
-															tx.signature,
+															tx.transaction
+																.signatures[0],
 															"Transaction signature"
 														)
 													}
 												>
 													<div className="flex items-center gap-3">
 														<div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-															<HiArrowUpRight className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+															{/* <HiArrowUpRight className="w-5 h-5 text-purple-600 dark:text-purple-400" /> */}
+															{tx.transaction
+																.message
+																.accountKeys[0] ===
+															address ? (
+																<HiArrowUpRight className="w-5 h-5 text-red-600 dark:text-red-400" />
+															) : (
+																<HiArrowDownLeft className="w-5 h-5 text-green-600 dark:text-green-400" />
+															)}
 														</div>
 														<div>
 															<p className="font-medium text-gray-900 dark:text-white">
 																{formatAddress(
-																	tx.signature
+																	tx
+																		.transaction
+																		.signatures[0]
 																)}
 															</p>
 															<p className="text-sm text-gray-500 dark:text-gray-400">
-																{tx.err
+																{/* {tx.meta.err
 																	? "Failed"
 																	: "Success"}{" "}
 																• Block{" "}
+																{tx.slot} */}
+																Success • Block{" "}
 																{tx.slot}
 															</p>
 														</div>
 													</div>
 													<RiExternalLinkLine className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200 transition-colors" />
 												</motion.div>
-											))}
+											)
+										)}
 									</div>
 								) : (
 									<div className="text-center py-8">
